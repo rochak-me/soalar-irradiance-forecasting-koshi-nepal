@@ -1,0 +1,247 @@
+# Solar Irradiance Forecasting for Koshi Province, Nepal
+
+<div align="center">
+
+![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange?style=flat-square&logo=tensorflow)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Under%20Review-yellow?style=flat-square)
+
+**3rd Year Mechanical Engineering Project · Kathmandu University · 2026**
+
+*A 5-year Global Horizontal Irradiance (GHI) forecasting study for Koshi Province, Nepal,
+using a Unified Regional Long Short-Term Memory (LSTM) Framework anchored to deterministic
+clear-sky physics.*
+
+</div>
+
+---
+
+## Abstract
+
+This study presents a 5-year (2025–2029) projection of Global Horizontal Irradiance (GHI)
+for the Koshi Province of Nepal, employing a **Unified Regional LSTM Framework** trained on
+**630,720 hourly observations** spanning 12 years (2013–2024) across six topographically
+diverse sites (Solcast commercial satellite dataset).
+
+To mitigate exponential error accumulation in multi-step autoregressive inference, the
+projection loop is anchored to a deterministic clear-sky physics engine (**pvlib**), computing
+exact orbital trajectory features at Δt = 1 h intervals across 43,824 future timesteps.
+Three architectures were benchmarked — LSTM, GRU, and CNN-LSTM — under identical conditions.
+The 2-layer stacked LSTM achieved superior performance and was selected for the final projection.
+
+---
+
+## Key Results
+
+### Model Performance (Hourly GHI — Test Set)
+
+| Model | R² | RMSE (W/m²) | MAE (W/m²) | MBE (W/m²) | nRMSE (%) | Skill Score |
+|---|---|---|---|---|---|---|
+| **LSTM** *(selected)* | **0.9429** | **61.63** | **30.83** | −4.72 | **17.73** | **0.3563** |
+| GRU | 0.9327 | 66.88 | — | — | 19.24 | 0.3015 |
+| CNN-LSTM | 0.9298 | 68.33 | — | — | 19.66 | 0.2863 |
+| Persistence *(baseline)* | 0.8621 | 95.74 | 47.00 | — | 27.55 | 0.0000 |
+
+> **Forecast Skill Score** = 1 − (LSTM RMSE / Persistence RMSE). A score of 0.3563 indicates the LSTM outperforms the naive persistence baseline by **35.6%**.
+>
+> **nRMSE** is normalised to the mean daytime (non-zero) GHI = 347.6 W/m².
+
+### Daily Aggregated Performance (LSTM)
+
+| Metric | Value |
+|---|---|
+| Daily R² | 0.9763 |
+| Daily RMSE | 1.16 kWh/m²/day |
+
+### 5-Year Energy Projection (2025–2029)
+
+| Year | Total Yield (kWh/m²) | Daily Average (kWh/m²/day) | Peak Day (kWh/m²) |
+|---|---|---|---|
+| 2025 | 2,374 | 6.50 | 8.30 |
+| 2026 | 2,374 | 6.50 | 8.29 |
+| 2027 | 2,374 | 6.50 | 8.28 |
+| 2028 | 2,380 | 6.50 | 8.31 |
+| 2029 | 2,374 | 6.51 | 8.30 |
+
+**5-year cumulative yield: ~11,877 kWh/m²**
+
+---
+
+## Study Area
+
+| Parameter | Value |
+|---|---|
+| Region | Koshi Province, Nepal |
+| Latitude | 26.4° – 27.5° N |
+| Longitude | 86.0° – 88.2° E |
+| Sites | 6 topographically diverse locations |
+| Elevation range | ~70 m – ~3,600 m ASL |
+| Data source | Solcast (commercial satellite) |
+| Training period | January 2013 – December 2024 |
+| Temporal resolution | Hourly (Δt = 1 h) |
+| Total training records | 630,720 |
+
+---
+
+## Methodology
+
+### 1. Unified Regional Training Dataset
+Data from all 6 sites were concatenated into a single training matrix of **630,720 rows**
+at Δt = 1 h. This forces the LSTM to learn fundamental atmospheric physics rather than
+memorise site-specific signatures, improving spatial generalisability.
+
+### 2. Feature Engineering & Pearson Screening
+13 kinematic and meteorological features retained (|r| > 0.05 vs GHI target):
+
+```
+clearsky_ghi, zenith, dni, dhi, cloud_opacity, air_temp,
+dewpoint_temp, relative_humidity, wind_speed_10m,
+clearsky_ghi, clearsky_dni, precipitable_water, surface_pressure
++ hour_sin, hour_cos, month_sin, month_cos  (cyclical encoding)
+```
+
+All features normalised to [0, 1] via MinMaxScaler. Sliding window: **n_past = 24 h**.
+
+### 3. LSTM Architecture & Training
+- 2-layer stacked LSTM: 64 → 32 units, Dropout(0.2)
+- Optimiser: Adam (lr = 1×10⁻³), Loss: MSE
+- Early stopping: patience = 5, monitor = val_loss
+- Train/Val/Test split: 80 / 10 / 10 (chronological, no shuffle)
+
+### 4. pvlib Physics Anchor
+The 5-year autoregressive inference loop was anchored to the **pvlib** deterministic
+clear-sky model. Exact zenith angles and theoretical irradiance ceilings were computed at
+Δt = 1 h for all 43,824 future timesteps, bounding predictions within physical constraints
+and preventing error accumulation.
+
+---
+
+## Repository Structure
+
+```
+.
+├── combined_training.ipynb      # Main notebook (data pipeline → training → projection)
+├── run_validation.py            # Standalone validation script (generates figures)
+│
+├── solar_dashboard/             # Interactive research dashboard
+│   ├── index.html
+│   ├── style.css
+│   ├── app.js
+│   └── solar_data.json          # Dashboard data (generated by notebook)
+│
+└── graphs/                      # Publication-quality figures (300 DPI)
+    ├── validation_diagnostics.pdf
+    └── validation_diagnostics.png
+```
+
+> **Note:** Raw Solcast CSV files are excluded from this repository (commercial license).
+> The `solar_data.json` file contains aggregated projection results suitable for
+> reproducing the dashboard without access to raw data.
+
+---
+
+## Setup & Usage
+
+### Requirements
+
+```bash
+pip install tensorflow pandas numpy scikit-learn matplotlib pvlib scipy
+```
+
+### Running the Notebook
+
+```bash
+# Open combined_training.ipynb in JupyterLab
+jupyter lab "combined training.ipynb"
+```
+
+Run cells sequentially. Key phases:
+- **Phase 1–2:** Data loading and cleaning (all 6 sites, 630k rows)
+- **Phase 3:** Scaling, sequencing, train/test split
+- **Phase 4:** LSTM training (~250 min on CPU)
+- **Phase 5:** Evaluation (R², RMSE, MAE)
+- **Phase 6:** GRU and CNN-LSTM comparison
+- **Phase 7:** 5-year autoregressive projection (pvlib anchor)
+
+### Running the Validation Script
+
+After running the notebook through Phase 5 (saves `y_test_Wm2.npy`, `pred_lstm_Wm2.npy`):
+
+```bash
+python run_validation.py
+```
+
+Generates `graphs/validation_diagnostics.pdf` (300 DPI, journal-ready).
+
+### Running the Dashboard
+
+```bash
+cd solar_dashboard
+python -m http.server 8000
+# Open http://localhost:8000 in browser
+```
+
+---
+
+## Figures
+
+### Validation Diagnostics
+
+The validation figure includes three panels:
+- **Fig. A** — 7-day time series: Observed vs. LSTM predicted GHI
+- **Fig. B** — Scatter plot with 1:1 reference line (R² = 0.9429)
+- **Fig. C** — Residual distribution with Normal fit (MBE = −4.72 W/m²)
+
+---
+
+## Data Availability
+
+Raw solar irradiance data was sourced from the **Solcast** commercial satellite dataset
+(https://solcast.com). Access requires a valid Solcast licence. Aggregated projection
+outputs and model metrics are available in `solar_data.json`.
+
+The trained LSTM model weights are available upon reasonable request to the corresponding
+author.
+
+---
+
+## Citation
+
+If you use this work, please cite:
+
+```bibtex
+@article{rocha2026ghi,
+  title   = {Long-Term Solar Irradiance Forecasting for Koshi Province, Nepal
+             Using a Unified Regional LSTM Framework},
+  author  = {[Your Name]},
+  journal = {[Target Journal]},
+  year    = {2026},
+  note    = {Under review}
+}
+```
+
+---
+
+## Acknowledgements
+
+This work was completed as a 3rd Year Mechanical Engineering Project at
+**Kathmandu University, Department of Mechanical Engineering**, under the supervision of
+[Supervisor Name].
+
+Solar irradiance data provided by **Solcast** (https://solcast.com).
+Deterministic clear-sky modelling performed using the **pvlib** open-source library.
+
+---
+
+## License
+
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
+
+> Raw Solcast data is subject to Solcast's commercial terms and is **not** covered by this licence.
+
+---
+
+<div align="center">
+  <sub>Kathmandu University · Department of Mechanical Engineering · 2026</sub>
+</div>

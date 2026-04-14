@@ -1,0 +1,60 @@
+# ── Raw Data (Commercial licence — do NOT commit) ──────────────────────────────
+*.csv
+*.xlsx
+*.xls
+*.dat
+*.nc
+*.hdf5
+*.h5
+
+# ── Trained Model Weights (too large for GitHub, share on request) ─────────────
+*.keras
+*.pb
+*.ckpt
+*.ckpt.index
+*.ckpt.data-*
+saved_model/
+
+# ── NumPy Arrays (large binary files) ─────────────────────────────────────────
+*.npy
+*.npz
+
+# ── Jupyter Notebook Checkpoints ──────────────────────────────────────────────
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# ── Python Cache ───────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# ── Virtual Environments ────────────────────────────────────────────────────────
+venv/
+env/
+.env/
+.venv/
+
+# ── OS Files ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE / Editor ───────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Matplotlib / Output Cache ──────────────────────────────────────────────────
+*.png.lock
+
+# ── Logs ───────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── KEEP THESE (explicitly whitelisted) ───────────────────────────────────────
+# solar_data.json       → dashboard data (aggregated, no raw Solcast)
+# graphs/*.pdf          → publication figures
+# graphs/*.png          → presentation figures

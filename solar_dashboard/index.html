@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHI Forecasting · Koshi Province · Kathmandu University</title>
+  <meta name="description" content="5-year Global Horizontal Irradiance forecasting for Koshi Province, Nepal. Unified Regional LSTM Framework. Kathmandu University, Department of Mechanical Engineering." />
+
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ══ Loading ══════════════════════════════════════════════════════════════ -->
+<div class="loader" id="loader">
+  <div class="loader-inner">
+    <svg class="loader-ring" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="32" />
+      <circle cx="40" cy="40" r="32" class="loader-ring-fill" />
+    </svg>
+    <div class="loader-label">Initialising</div>
+  </div>
+</div>
+
+<!-- ══ Layout root ══════════════════════════════════════════════════════════ -->
+<div class="layout" id="layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Solar diagram -->
+    <div class="sidebar-diagram">
+      <svg class="solar-diagram" viewBox="0 0 160 160" aria-hidden="true">
+        <!-- Outer orbit ring -->
+        <circle cx="80" cy="80" r="70" class="sd-ring" />
+        <circle cx="80" cy="80" r="52" class="sd-ring sd-ring--dim" />
+        <circle cx="80" cy="80" r="34" class="sd-ring" />
+        <!-- Crosshair -->
+        <line x1="80" y1="8"   x2="80" y2="28"  class="sd-line" />
+        <line x1="80" y1="132" x2="80" y2="152" class="sd-line" />
+        <line x1="8"  y1="80"  x2="28" y2="80"  class="sd-line" />
+        <line x1="132" y1="80" x2="152" y2="80" class="sd-line" />
+        <!-- Diagonal ticks -->
+        <line x1="30"  y1="30"  x2="41"  y2="41"  class="sd-line sd-line--dim" />
+        <line x1="119" y1="119" x2="130" y2="130" class="sd-line sd-line--dim" />
+        <line x1="130" y1="30"  x2="119" y2="41"  class="sd-line sd-line--dim" />
+        <line x1="41"  y1="119" x2="30"  y2="130" class="sd-line sd-line--dim" />
+        <!-- Azimuth arc (partial) -->
+        <path d="M 80 46 A 34 34 0 1 1 47.6 97.0" class="sd-arc" />
+        <circle cx="80" cy="46"  r="3" class="sd-dot" />
+        <circle cx="47.6" cy="97" r="2" class="sd-dot sd-dot--sm" />
+        <!-- Sun core -->
+        <circle cx="80" cy="80" r="12" class="sd-sun" />
+        <circle cx="80" cy="80" r="7"  class="sd-sun-core" />
+        <!-- Coordinate labels -->
+        <text x="80" y="5"   class="sd-text" text-anchor="middle">N</text>
+        <text x="80" y="160" class="sd-text" text-anchor="middle">S</text>
+        <text x="2"  y="83"  class="sd-text" text-anchor="start">W</text>
+        <text x="158" y="83" class="sd-text" text-anchor="end">E</text>
+        <!-- Zenith label -->
+        <text x="95" y="44" class="sd-text sd-text--accent">ZEN</text>
+        <!-- Degree arc label -->
+        <text x="43" y="112" class="sd-text sd-text--sm">alt.</text>
+      </svg>
+
+      <div class="diagram-caption">Solar Geometry · Koshi Province</div>
+    </div>
+
+    <!-- Project identity -->
+    <div class="sidebar-identity">
+      <div class="si-ku-row">
+        <div class="si-ku-badge">KU</div>
+        <div class="si-ku-text">
+          <span>Dept. of Mechanical Engineering</span>
+          <span>Kathmandu University</span>
+        </div>
+      </div>
+      <div class="si-title">GHI Forecasting<br>for Koshi Province</div>
+      <div class="si-sub">3rd Year Project · 2026</div>
+    </div>
+
+    <div class="sidebar-rule"></div>
+
+    <!-- KPI summary -->
+    <div class="sidebar-kpis">
+      <div class="skpi" id="skpi-annual">
+        <span class="skpi-val" data-target="2375" data-decimals="0">—</span>
+        <span class="skpi-unit">kWh/m²/yr</span>
+        <span class="skpi-lbl">Annual Avg. Yield</span>
+      </div>
+      <div class="skpi skpi--accent" id="skpi-r2">
+        <span class="skpi-val" data-target="98.78" data-decimals="2" data-suffix="%">—</span>
+        <span class="skpi-unit"></span>
+        <span class="skpi-lbl">LSTM R² (Daily)</span>
+      </div>
+      <div class="skpi" id="skpi-rmse">
+        <span class="skpi-val" data-target="25.1" data-decimals="1">—</span>
+        <span class="skpi-unit">W/m² RMSE</span>
+        <span class="skpi-lbl">Hourly Error</span>
+      </div>
+      <div class="skpi" id="skpi-total">
+        <span class="skpi-val" data-target="11877" data-decimals="0">—</span>
+        <span class="skpi-unit">kWh/m²</span>
+        <span class="skpi-lbl">5-Year Total</span>
+      </div>
+    </div>
+
+    <div class="sidebar-rule"></div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <a href="#abstract"     class="snav-link snav-active" data-section="abstract">Abstract</a>
+      <a href="#methodology"  class="snav-link" data-section="methodology">Methodology</a>
+      <a href="#forecast"     class="snav-link" data-section="forecast">5-Year Forecast</a>
+      <a href="#analysis"     class="snav-link" data-section="analysis">Temporal Analysis</a>
+      <a href="#models"       class="snav-link" data-section="models">Architecture Ablation</a>
+    </nav>
+
+    <div class="sidebar-rule"></div>
+
+    <!-- Metadata -->
+    <div class="sidebar-meta">
+      <div class="smeta-row"><span>Region</span><span>Koshi Province, NP</span></div>
+      <div class="smeta-row"><span>Lat.</span><span>26.4°–27.5° N</span></div>
+      <div class="smeta-row"><span>Lon.</span><span>86.0°–88.2° E</span></div>
+      <div class="smeta-row"><span>Sites</span><span>6 Topographic</span></div>
+      <div class="smeta-row"><span>Training</span><span>630,720 hrs</span></div>
+      <div class="smeta-row"><span>Source</span><span>Solcast 2013–2024</span></div>
+      <div class="smeta-row"><span>Horizon</span><span>2025–2029</span></div>
+    </div>
+
+    <div class="sidebar-generated" id="sidebar-generated">Generated —</div>
+  </aside>
+
+  <!-- ── Main Content ──────────────────────────────────────────────────────── -->
+  <main class="content" id="content">
+
+    <!-- ── Abstract ─────────────────────────────────────────────────────────── -->
+    <section class="c-section" id="abstract">
+      <div class="c-section-label">§ Overview</div>
+      <h1 class="c-title">
+        Long-Term Solar Irradiance<br>
+        <em>Forecasting for Koshi Province, Nepal</em>
+      </h1>
+
+      <div class="abstract-block">
+        <p>
+          This study presents a 5-year (2025–2029) projection of Global Horizontal Irradiance
+          (GHI) for the Koshi Province of Nepal, employing a <strong>Unified Regional Long Short-Term
+          Memory (LSTM) Framework</strong>. Historical solar and meteorological data from six
+          topographically diverse sites were concatenated into a single training matrix of
+          <strong>630,720 hourly observations</strong> spanning 12 years (2013–2024), sourced
+          from the Solcast commercial satellite dataset.
+        </p>
+        <p>
+          To mitigate the exponential error accumulation inherent to multi-step autoregressive
+          inference, the projection loop is anchored to a <strong>deterministic clear-sky physics
+          engine (<em>pvlib</em>)</strong>, computing exact orbital trajectory features at strict
+          Δt = 1&nbsp;h intervals across 43,824 future timesteps. Three architectures were
+          benchmarked — LSTM, GRU, and CNN-LSTM — under identical training conditions.
+          The 2-layer LSTM achieved superior performance and was selected for final projection.
+        </p>
+      </div>
+
+      <!-- Summary KPI strip (horizontal, wide) -->
+      <div class="kpi-strip">
+        <div class="kpi-strip-item">
+          <span class="ksi-num" id="ksi-annual">2,375</span>
+          <span class="ksi-unit">kWh / m² / yr</span>
+          <span class="ksi-lbl">Annual Average Yield</span>
+        </div>
+        <div class="ksi-divider"></div>
+        <div class="kpi-strip-item">
+          <span class="ksi-num" id="ksi-total">11,877</span>
+          <span class="ksi-unit">kWh / m²</span>
+          <span class="ksi-lbl">5-Year Cumulative</span>
+        </div>
+        <div class="ksi-divider"></div>
+        <div class="kpi-strip-item">
+          <span class="ksi-num" id="ksi-peak">8.31</span>
+          <span class="ksi-unit">kWh / m² / day</span>
+          <span class="ksi-lbl" id="ksi-peak-lbl">Peak Daily Yield</span>
+        </div>
+        <div class="ksi-divider"></div>
+        <div class="kpi-strip-item kpi-strip-item--accent">
+          <span class="ksi-num">98.78%</span>
+          <span class="ksi-unit">R²  (daily integrated)</span>
+          <span class="ksi-lbl">LSTM Accuracy</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="c-rule"></div>
+
+    <!-- ── Methodology ───────────────────────────────────────────────────────── -->
+    <section class="c-section" id="methodology">
+      <div class="c-section-label">§ 1 — Study Design</div>
+      <h2 class="c-heading">Methodology</h2>
+
+      <div class="method-list">
+
+        <div class="mrow">
+          <div class="mrow-num">01</div>
+          <div class="mrow-body">
+            <h3 class="mrow-title">Unified Regional Training Dataset</h3>
+            <p class="mrow-desc">
+              Rather than developing highly localised models for individual coordinate points,
+              data from all six measurement sites were merged into a single training matrix
+              of <strong>630,720 rows</strong> at strict <strong>Δt = 1 h</strong> resolution
+              (8,760 records × 12 years × 6 sites). This compels the LSTM to extract
+              fundamental atmospheric attenuation physics rather than memorise site-specific
+              micro-climate signatures, substantially improving spatial transferability to
+              unmonitored prospective sites.
+            </p>
+          </div>
+        </div>
+
+        <div class="mrow">
+          <div class="mrow-num">02</div>
+          <div class="mrow-body">
+            <h3 class="mrow-title">Feature Engineering &amp; Pearson Screening</h3>
+            <p class="mrow-desc">
+              13 kinematic and meteorological features were retained following Pearson
+              correlation screening (|r| &gt; 0.05) against the GHI target. Primary predictors:
+              <code>clearsky_ghi</code>, <code>zenith</code>, <code>dni</code>,
+              <code>cloud_opacity</code>, <code>air_temp</code>, <code>relative_humidity</code>.
+              All features normalised to [0, 1] via MinMaxScaler prior to sequence generation.
+              Sliding window: <strong>n<sub>past</sub> = 24 h</strong> — exactly one diurnal cycle.
+            </p>
+          </div>
+        </div>
+
+        <div class="mrow">
+          <div class="mrow-num">03</div>
+          <div class="mrow-body">
+            <h3 class="mrow-title">LSTM Architecture &amp; Training Protocol</h3>
+            <p class="mrow-desc">
+              2-layer stacked LSTM (64 → 32 units), Adam optimiser, MSE loss function.
+              Early stopping with patience = 5 monitoring <code>val_loss</code> to prevent
+              overfitting. Three architectures — LSTM, GRU, CNN-LSTM — were benchmarked under
+              identical splits and hyperparameters. The LSTM returned the lowest test RMSE
+              (25.1 W/m²) and was selected for the 5-year autoregressive projection.
+            </p>
+          </div>
+        </div>
+
+        <div class="mrow">
+          <div class="mrow-num">04</div>
+          <div class="mrow-body">
+            <h3 class="mrow-title">Deterministic pvlib Physics Anchor</h3>
+            <p class="mrow-desc">
+              To prevent exponential error accumulation during multi-step inference,
+              the autoregressive loop was anchored to the <strong>pvlib</strong>
+              deterministic clear-sky model. Exact orbital zenith angles and theoretical
+              irradiance ceilings were computed at Δt = 1 h for all 43,824 future timesteps
+              (5 × 8,760 hours + 24 leap-day hours). The LSTM operates as a
+              <em>non-linear atmospheric transfer function</em> rather than a free-running
+              statistical extrapolator, bounding predictions within physical constraints.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="c-rule"></div>
+
+    <!-- ── 5-Year Forecast ───────────────────────────────────────────────────── -->
+    <section class="c-section" id="forecast">
+      <div class="c-section-label">§ 2 — Multi-Year Projection</div>
+      <h2 class="c-heading">Daily GHI Yield — 2025 to 2029</h2>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="legend-row" id="legend-5year"></div>
+        </div>
+        <div id="chart-5year" style="height:340px;"></div>
+        <p class="fig-caption">
+          <strong>Fig. 1.</strong>&ensp;Daily integrated GHI yield (kWh/m²/day) from LSTM autoregressive
+          inference, 2025–2029. Each trace corresponds to one calendar year; dashed amber curve is a
+          centred 30-day moving average. Anchored to <em>pvlib</em> at Δt = 1 h, N = 43,824 steps.
+        </p>
+      </div>
+
+      <!-- Annual table -->
+      <div class="panel" style="margin-top:20px;">
+        <div class="panel-label">Table 1 — Annual Energy Yield Summary</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Total Yield (kWh/m²)</th>
+                <th>Daily Average (kWh/m²/day)</th>
+                <th>Peak Day Yield (kWh/m²)</th>
+                <th>Monsoon Avg (kWh/m²/day)</th>
+              </tr>
+            </thead>
+            <tbody id="annual-tbody">
+              <tr><td colspan="5" class="t-loading">Loading data…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="c-rule"></div>
+
+    <!-- ── Temporal Analysis ─────────────────────────────────────────────────── -->
+    <section class="c-section" id="analysis">
+      <div class="c-section-label">§ 3 — Temporal Analysis</div>
+      <h2 class="c-heading">Seasonal &amp; Diurnal Irradiance Profile</h2>
+
+      <div class="split-row">
+
+        <div class="panel split-panel">
+          <div class="panel-label">Fig. 2 — Hourly GHI · 7-Day Snapshot</div>
+          <div class="panel-sub">LSTM prediction (solid) vs. pvlib clear-sky ceiling (dashed)</div>
+
+          <div class="picker-bar" id="year-picker-row">
+            <span class="picker-tag">Year</span>
+          </div>
+          <div class="picker-bar" id="season-picker-row">
+            <span class="picker-tag">Season</span>
+            <button class="pick-btn pick-active" data-month="01">Jan — Dry</button>
+            <button class="pick-btn" data-month="04">Apr — Spring</button>
+            <button class="pick-btn" data-month="07">Jul — Monsoon</button>
+            <button class="pick-btn" data-month="10">Oct — Post-M.</button>
+          </div>
+
+          <div id="chart-7day" style="height:260px;"></div>
+          <p class="fig-caption" style="margin-top:10px;">
+            Attenuation below the dashed clear-sky ceiling reflects cloud opacity and
+            atmospheric aerosol scattering. Monsoon months (Jun–Aug) exhibit systematic
+            suppression of GHI, consistent with historical Koshi Province climatology.
+          </p>
+        </div>
+
+        <div class="panel split-panel">
+          <div class="panel-label">Fig. 3 — Monthly Average Daily Yield (kWh/m²/day)</div>
+          <div class="panel-sub">Dark cells indicate monsoon-season irradiance attenuation</div>
+
+          <div id="chart-heatmap" style="height:300px;"></div>
+          <p class="fig-caption" style="margin-top:10px;">
+            Monthly mean daily GHI by year reveals a consistent seasonal signal.
+            The June–August trough corresponds to the South Asian monsoon,
+            reducing average daily yield by approximately 38% versus the dry season.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="c-rule"></div>
+
+    <!-- ── Model Comparison ──────────────────────────────────────────────────── -->
+    <section class="c-section" id="models">
+      <div class="c-section-label">§ 4 — Architecture Ablation Study</div>
+      <h2 class="c-heading">Model Performance Comparison</h2>
+      <p class="c-body-text">
+        All three architectures were trained under identical conditions: same 80/10/10 dataset splits,
+        same optimiser (Adam, lr = 1×10<sup>−3</sup>), same early-stopping criterion
+        (patience = 5, monitor = val_loss). Performance metrics are reported on the held-out test partition.
+      </p>
+
+      <div class="panel" style="margin-top:24px;">
+        <div class="panel-label">Table 2 — Ablation Study Results</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Architecture</th>
+                <th>R² Score</th>
+                <th>RMSE (W/m²)</th>
+                <th>Training Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="model-tbody">
+              <tr><td colspan="5" class="t-loading">Loading data…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <div id="chart-models" style="height:260px;"></div>
+        <p class="fig-caption">
+          <strong>Fig. 4.</strong>&ensp;R² scores (%) for LSTM, GRU, and CNN-LSTM on identical
+          held-out test sequences. RMSE annotations shown inside bars. The standard 2-layer stacked
+          LSTM achieves the highest R² (94.29%) and lowest hourly RMSE (25.1 W/m²), and was
+          selected as the primary architecture for the 5-year autoregressive projection.
+        </p>
+      </div>
+    </section>
+
+    <!-- Footer inside main -->
+    <footer class="c-footer">
+      <div class="cf-left">
+        <span class="cf-title">GHI Forecasting · Koshi Province, Nepal</span>
+        <span class="cf-sub">3rd Year Mechanical Engineering Project · Kathmandu University · 2026</span>
+        <span class="cf-tech">LSTM · GRU · CNN-LSTM · pvlib · Solcast · TensorFlow/Keras</span>
+      </div>
+      <div class="cf-right" id="footer-gen">Generated: —</div>
+    </footer>
+
+  </main><!-- /content -->
+</div><!-- /layout -->
+
+<script src="app.js"></script>
+</body>
+</html>
