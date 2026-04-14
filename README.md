@@ -9,6 +9,8 @@
 
 **3rd Year Mechanical Engineering Project · Kathmandu University · 2026**
 
+### 🌍 [View the Live Interactive Dashboard Here](https://rochak-me.github.io/soalar-irradiance-forecasting-koshi-nepal/solar_dashboard/)
+
 *A 5-year Global Horizontal Irradiance (GHI) forecasting study for Koshi Province, Nepal,
 using a Unified Regional Long Short-Term Memory (LSTM) Framework anchored to deterministic
 clear-sky physics.*
